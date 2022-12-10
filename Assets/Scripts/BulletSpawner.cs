@@ -6,7 +6,7 @@ using UnityEngine;
 public class BulletSpawner : NetworkBehaviour
 {
 
-    public NetworkVariable<int> BulletDamage = new NetworkVariable<int>(1);
+    public NetworkVariable<int> BulletDamage = new NetworkVariable<int>(5);
     public NetworkVariable<Color> PlayerColor = new NetworkVariable<Color>(Color.red);
 
     public Rigidbody bullet;

@@ -8,7 +8,8 @@ public class Player : NetworkBehaviour {
     public NetworkVariable<Vector3> PositionChange = new NetworkVariable<Vector3>();
     public NetworkVariable<Vector3> RotationChange = new NetworkVariable<Vector3>();
     public NetworkVariable<Color> PlayerColor = new NetworkVariable<Color>(Color.red);
-    public NetworkVariable<int> Score = new NetworkVariable<int>(50);
+    public NetworkVariable<int> Score = new NetworkVariable<int>(0);
+    public NetworkVariable<int> Health = new NetworkVariable<int>(100);
 
     public TMPro.TMP_Text txtScoreDisplay;
 
@@ -44,6 +45,7 @@ public class Player : NetworkBehaviour {
     float verticalInput;
 
     Vector3 moveDirection;
+    Vector3 spawnPoint;
 
     Rigidbody rb;
 
@@ -55,6 +57,8 @@ public class Player : NetworkBehaviour {
         ApplyPlayerColor();
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
+
+        spawnPoint = rb.transform.position;
 
         readyToJump = true;
         PlayerColor.OnValueChanged += OnPlayerColorChanged;
@@ -69,7 +73,7 @@ public class Player : NetworkBehaviour {
         _fpsCamera = transform.Find("Camera").transform.Find("FPSCamera").GetComponent<Camera>();
         _fpsCamera.enabled = IsOwner;
 
-        Score.OnValueChanged += ClientOnScoreChanged;
+        Health.OnValueChanged += ClientOnScoreChanged;
         _bulletSpawner = transform.Find("Camera").transform.Find("RArm").transform.Find("BulletSpawner").GetComponent<BulletSpawner>();
 
         // Set layers for camera rendering
@@ -86,7 +90,7 @@ public class Player : NetworkBehaviour {
 
         if (IsHost)
         {
-            _bulletSpawner.BulletDamage.Value = 1;
+            _bulletSpawner.BulletDamage.Value = 5;
             _bulletSpawner.PlayerColor.Value = Color.red;
         }
         DisplayScore();
@@ -109,11 +113,9 @@ public class Player : NetworkBehaviour {
                 rb.drag = 0;
             }
 
-            /*            Vector3[] results = CalcMovement();
-                        RequestPositionForMovementServerRpc(results[0], results[1]);*/
             if (Input.GetButtonDown("Fire1"))
             {
-                if (Score.Value > 0)
+                if (Health.Value > 0)
                 {
                     _bulletSpawner.FireServerRpc();
                 }
@@ -196,7 +198,7 @@ public class Player : NetworkBehaviour {
 
     private void HostHandleBulletCollision(GameObject bullet)
     {
-        if (Score.Value > 0)
+        if (Health.Value > 0)
         {
             // Modified bullets for Teams
             Bullet bulletScript = bullet.GetComponent<Bullet>();
@@ -206,7 +208,11 @@ public class Player : NetworkBehaviour {
 
             if (PlayerColor.Value != otherPlayer.PlayerColor.Value)
             {
-                Score.Value -= bulletScript.Damage.Value;
+                Health.Value -= bulletScript.Damage.Value;
+                if ( Health.Value <= 0)
+                {
+                    otherPlayer.Score.Value++;
+                }
             }
 
         }
@@ -280,11 +286,18 @@ public class Player : NetworkBehaviour {
 
     public void DisplayScore()
     {
-        txtScoreDisplay.text = Score.Value.ToString();
-        if (Score.Value <= 0)
+        txtScoreDisplay.text = $"HP: {Health.Value} | SCORE: {Score.Value}";
+        if (Health.Value <= 0)
         {
             txtScoreDisplay.text = "Dead";
+            Respawn();
         }
+    }
+
+    public void Respawn()
+    {
+        // TODO: Create teleport system for characters on death
+        Health.Value = 100;
     }
 
 }
